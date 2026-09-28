@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Demo — Conciliador CFDI vs Excel (corre en tu navegador)</title>
+<style>
+:root{--bg:#0d1014;--card:#161a20;--line:#242b34;--fg:#e9edf2;--muted:#98a3b0;--acc:#3ddc97;--err:#ff6b6b;--wr:#ffb454}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1000px;margin:0 auto;padding:0 20px}
+header{padding:44px 0 26px;border-bottom:1px solid var(--line)}
+h1{font-size:clamp(24px,4.5vw,36px);margin:0 0 10px;line-height:1.2}
+.sub{color:var(--muted);font-size:17px;margin:0;max-width:66ch}
+h2{font-size:20px;margin:36px 0 10px}
+.badges{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+.b{background:var(--card);border:1px solid var(--line);border-radius:99px;
+   padding:5px 13px;font-size:13px;color:var(--muted)}
+.drop{border:2px dashed var(--line);border-radius:14px;padding:34px 20px;
+      text-align:center;margin:22px 0;transition:.15s;cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--acc);background:#0f1512}
+.drop h3{margin:0 0 6px;font-size:18px}
+.drop p{margin:0;color:var(--muted);font-size:14.5px}
+button{background:var(--acc);color:#06231a;border:0;padding:13px 24px;
+       border-radius:9px;font-size:15px;font-weight:650;cursor:pointer}
+button.sec{background:transparent;color:var(--fg);border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:16px 0}
+.out{background:var(--card);border:1px solid var(--line);border-radius:12px;
+     padding:20px;margin:18px 0;display:none}
+.out.on{display:block}
+.kpis{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:16px 0}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+.kpi .n{font-size:23px;font-weight:700;letter-spacing:-.02em}
+.kpi .l{color:var(--muted);font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;margin-top:3px}
+.ok{color:var(--acc)}.bad{color:var(--err)}.wr{color:var(--wr)}
+table{width:100%;border-collapse:collapse;margin:14px 0;font-size:14px}
+th,td{text-align:left;padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em}
+.hint{font-size:13.5px;color:var(--muted);margin:10px 0}
+code{background:#0a0d10;padding:2px 6px;border-radius:5px;color:var(--acc);font-size:13.5px}
+footer{padding:36px 0 28px;border-top:1px solid var(--line);margin-top:42px;color:var(--muted);font-size:14px}
+footer a{color:var(--fg)}
+a{color:inherit}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+<h1>Pega tus XML del SAT. Te digo qué no cuadra.</h1>
+<p class="sub">Funciona entero en tu navegador. Nada se sube a ningún servidor: el archivo se lee en tu computadora y se descarta al cerrar la pestaña.</p>
+<div class="badges">
+  <span class="b">sin instalar nada</span>
+  <span class="b">sin servidor</span>
+  <span class="b">CFDI 4.0</span>
+  <span class="b">detecta ISR retenido</span>
+  <span class="b">no confunde pagos con ventas</span>
+</div>
+</div></header>
+
+<div class="wrap">
+
+<h2>1. Carga los comprobantes</h2>
+<div class="drop" id="drop">
+  <h3>Arrastra aquí el ZIP que bajaste del SAT</h3>
+  <p>o los archivos .xml sueltos. Todo se procesa en tu máquina.</p>
+  <p style="margin-top:14px"><button id="pick">Elegir archivo</button></p>
+  <input type="file" id="file" accept=".zip,.xml" multiple hidden>
+</div>
+<div class="row" id="filesRow" style="display:none">
+  <span class="hint" id="filesInfo"></span>
+  <button id="clear" class="sec">Limpiar</button>
+</div>
+
+<h2>2. Resultado</h2>
+<div class="out" id="out">
+  <div class="kpis">
+    <div class="kpi"><div class="n" id="kIng">0</div><div class="l">comprobantes</div></div>
+    <div class="kpi"><div class="n ok" id="kSum">$0</div><div class="l">suma ingresos</div></div>
+    <div class="kpi"><div class="n" id="kIVA">$0</div><div class="l">IVA trasladado</div></div>
+    <div class="kpi"><div class="n" id="kISR">$0</div><div class="l">ISR retenido</div></div>
+  </div>
+  <div id="detail"></div>
+  <div class="row">
+    <a href="https://github.com/cesarinrosales3108-ui/cfdi-reconciler" target="_blank" rel="noopener">
+      <button class="sec">Ver el código (58 pruebas)</button></a>
+    <a href="https://whop.com/checkout/plan_ctUG1QbfKqjwF" target="_blank" rel="noopener">
+      <button>Te lo concilio yo &mdash; $10</button></a>
+  </div>
+</div>
+
+<h2 style="margin-top:44px">Lo que esta herramienta acierta y las demás no</h2>
+<p class="hint">Tres cosas del formato CFDI 4.0 duplican cualquier total si las cuentas a ojo. Esta herramienta está probada contra ellas.</p>
+<table>
+<tr><th>Trampa</th><th>Qué pasa si no la manejas</th></tr>
+<tr><td><b>El IVA aparece dos veces</b><br><code>cfdi:Impuestos</code> dentro de cada <code>Concepto</code> y otra vez a nivel comprobante</td>
+    <td class="bad">Te da el doble del IVA real</td></tr>
+<tr><td><b>El complemento de pago se declara dos veces</b><br><code>cfdi:Pago</code> y <code>pago20:Pago</code> son el mismo pago</td>
+    <td class="bad">Una factura de $11,600 se vuelve $23,200</td></tr>
+<tr><td><b>La retención viene anidada</b><br>hay un <code>Retencion</code> contenedor y otro con <code>TipoRet</code></td>
+    <td class="bad">El ISR retenido se duplica</td></tr>
+</table>
+<p class="hint">Bonus, mismo tipo de error: Excel en español exporta CSV con <b>punto y coma</b>. Leído con coma, el archivo entero se vuelve una columna y nada se detecta.</p>
+
+</div>
+
+<footer><div class="wrap">
+<p>Código abierto: <a href="https://github.com/cesarinrosales3108-ui/cfdi-reconciler">github.com/cesarinrosales3108-ui/cfdi-reconciler</a> &middot; 58 pruebas con XML reales de CFDI 4.0.</p>
+<p style="margin-top:8px">No soy contador. Esto compara archivos; no sustituye asesoría fiscal.</p>
+</div></footer>
+
+<script src="app.js"></script>
+</body>
+</html>
